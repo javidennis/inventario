@@ -7,12 +7,12 @@
 <title>Inventario · Nicolás Market</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 <style>
 :root{
   --green:#0F6E56;--green-l:#E1F5EE;--green-m:#5DCAA5;--green-d:#085041;
   --red:#A32D2D;--red-l:#FCEBEB;--amber:#854F0B;--amber-l:#FAEEDA;
-  --blue:#185FA5;--blue-l:#E6F1FB;
+  --blue:#185FA5;
   --g50:#F8F8F6;--g100:#EFEFEB;--g200:#D3D1C7;--g400:#888780;--g600:#5F5E5A;--g900:#1A1A18;
   --r:12px;--rs:8px;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
 }
@@ -27,8 +27,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .app-header p{font-size:13px;opacity:.75;margin-top:3px}
 .screen-body{flex:1;padding:18px;overflow-y:auto}
 .card{background:#fff;border:1px solid var(--g100);border-radius:var(--r);padding:14px;margin-bottom:12px}
-.card.green{border-left:3px solid var(--green)}
-.card.red{border-left:3px solid var(--red)}
+.card.green{border-left:3px solid var(--green)}.card.red{border-left:3px solid var(--red)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .stat{background:#fff;border:1px solid var(--g100);border-radius:var(--rs);padding:12px 14px}
 .stat-v{font-size:26px;font-weight:600;color:var(--g900);line-height:1}
@@ -36,65 +35,94 @@ body{display:flex;flex-direction:column;min-height:100vh}
 label{display:block;font-size:12px;font-weight:500;color:var(--g600);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}
 input[type=text],input[type=number],select,textarea{
   width:100%;padding:13px 14px;border:1.5px solid var(--g100);border-radius:var(--rs);
-  font-size:15px;font-family:var(--font);color:var(--g900);background:#fff;outline:none;transition:border-color .15s;-webkit-appearance:none
+  font-size:15px;font-family:var(--font);color:var(--g900);background:#fff;outline:none;
+  transition:border-color .15s;-webkit-appearance:none
 }
-input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1)}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{
+  border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1)
+}
 input[type=number]{font-size:28px;font-weight:600;text-align:center;padding:14px}
 textarea{min-height:72px;resize:vertical;font-size:14px}
 .field{margin-bottom:14px}
 
-/* ── Barcode area ── */
-.bc-row{display:flex;gap:8px;align-items:stretch}
-.bc-row input{flex:1;font-family:var(--mono);font-size:15px;letter-spacing:.4px}
+/* ── Barcode row ── */
+.bc-row{display:flex;gap:8px}
+.bc-row input{flex:1;font-family:var(--mono);font-size:16px;letter-spacing:.5px}
+.search-btn{
+  padding:0 18px;background:var(--green);border:none;border-radius:var(--rs);
+  color:#fff;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;
+  white-space:nowrap;flex-shrink:0;transition:background .15s
+}
+.search-btn:active{background:var(--green-d)}
 .cam-btn{
-  width:52px;flex-shrink:0;background:var(--green);border:none;border-radius:var(--rs);
+  width:52px;flex-shrink:0;background:var(--g100);border:none;border-radius:var(--rs);
   cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s
 }
-.cam-btn:active{background:var(--green-d)}
-.cam-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2}
+.cam-btn:active{background:var(--g200)}
+.cam-btn svg{width:22px;height:22px;stroke:var(--g600);fill:none;stroke-width:2}
+.bc-hint{font-size:12px;color:var(--g400);margin-top:6px}
 
 /* ── Scanner modal ── */
-.scanner-modal{
+.scan-modal{
   display:none;position:fixed;inset:0;z-index:1000;
-  background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:flex-start;
-  padding-top:60px
+  background:#000;flex-direction:column;align-items:center
 }
-.scanner-modal.open{display:flex}
-.scanner-inner{position:relative;width:min(320px,90vw)}
-.scanner-inner video{width:100%;border-radius:var(--r);display:block}
-.scanner-frame{
-  position:absolute;inset:0;border-radius:var(--r);pointer-events:none;
-  border:2px solid var(--green-m);box-shadow:0 0 0 9999px rgba(0,0,0,.45)
+.scan-modal.open{display:flex}
+.scan-topbar{
+  width:100%;padding:52px 20px 16px;display:flex;align-items:center;
+  justify-content:space-between;background:rgba(0,0,0,.6)
 }
+.scan-topbar span{color:#fff;font-size:15px;font-weight:500}
+.scan-close{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;
+  font-family:var(--font);cursor:pointer
+}
+.scan-viewport{
+  position:relative;width:100%;flex:1;overflow:hidden;
+  display:flex;align-items:center;justify-content:center
+}
+#scan-video{width:100%;height:100%;object-fit:cover}
+.scan-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center
+}
+.scan-frame{
+  width:min(280px,80vw);height:160px;position:relative
+}
+.scan-corner{position:absolute;width:24px;height:24px;border-color:var(--green-m);border-style:solid}
+.sc-tl{top:0;left:0;border-width:3px 0 0 3px;border-radius:3px 0 0 0}
+.sc-tr{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 3px 0 0}
+.sc-bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 3px}
+.sc-br{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 3px 0}
 .scan-line{
-  position:absolute;left:10%;right:10%;height:2px;background:var(--green-m);
-  animation:scanline 2s ease-in-out infinite;top:10%
+  position:absolute;left:0;right:0;height:2px;background:var(--green-m);
+  animation:scanmove 2s ease-in-out infinite;top:0;opacity:.8
 }
-@keyframes scanline{0%,100%{top:10%}50%{top:88%}}
-.scanner-label{color:#fff;font-size:14px;text-align:center;margin-top:16px;opacity:.8}
-.scanner-label small{display:block;font-size:12px;margin-top:4px;opacity:.6}
-.close-scan{
-  margin-top:20px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
-  color:#fff;padding:12px 32px;border-radius:24px;font-size:14px;font-family:var(--font);cursor:pointer
+@keyframes scanmove{0%,100%{top:0}50%{top:calc(100% - 2px)}}
+.scan-hint-bar{
+  width:100%;padding:16px 20px 32px;text-align:center;
+  background:rgba(0,0,0,.6)
 }
-.close-scan:active{background:rgba(255,255,255,.2)}
-.scan-result-flash{
-  position:absolute;inset:0;border-radius:var(--r);background:rgba(93,202,165,.3);
-  opacity:0;transition:opacity .2s;pointer-events:none
+.scan-hint-bar p{color:rgba(255,255,255,.8);font-size:14px;margin-bottom:4px}
+.scan-hint-bar small{color:rgba(255,255,255,.5);font-size:12px}
+.scan-result{
+  position:absolute;inset:0;background:rgba(93,202,165,.25);
+  opacity:0;transition:opacity .15s;pointer-events:none
 }
 
 /* ── Counter ── */
 .counter-row{display:flex;gap:10px;align-items:center}
 .adj-btn{
-  width:52px;height:52px;flex-shrink:0;background:var(--g100);border:none;border-radius:var(--rs);
-  font-size:26px;color:var(--g600);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .1s
+  width:52px;height:52px;flex-shrink:0;background:var(--g100);border:none;
+  border-radius:var(--rs);font-size:26px;color:var(--g600);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .1s,transform .1s
 }
 .adj-btn:active{background:var(--g200);transform:scale(.94)}
 .diff-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--g100);margin-top:10px}
 .diff-lbl{font-size:13px;color:var(--g400)}
 .diff-v{font-size:18px;font-weight:600}
 .dn{color:var(--red)}.dp{color:var(--green)}.dz{color:var(--blue)}
-.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;margin-top:6px}
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;margin-top:6px}
 .bok{background:var(--green-l);color:var(--green-d)}.blow{background:var(--amber-l);color:var(--amber)}.bzero{background:var(--red-l);color:var(--red)}
 .pinfo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .pi{background:var(--g50);border-radius:var(--rs);padding:8px 10px}
@@ -103,55 +131,62 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
 
 /* ── Buttons ── */
 .btn{
-  width:100%;padding:15px;font-size:15px;font-weight:600;border-radius:var(--r);border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,background .15s;
-  font-family:var(--font);margin-bottom:10px
+  width:100%;padding:15px;font-size:15px;font-weight:600;border-radius:var(--r);border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform .1s,background .15s;font-family:var(--font);margin-bottom:10px
 }
 .btn:active{transform:scale(.98)}
 .btn-primary{background:var(--green);color:#fff}.btn-primary:hover{background:var(--green-d)}
 .btn-primary:disabled{background:var(--green-m);cursor:not-allowed}
-.btn-outline{background:#fff;color:var(--g900);border:1.5px solid var(--g200)}.btn-outline:hover{background:var(--g50)}
+.btn-outline{background:#fff;color:var(--g900);border:1.5px solid var(--g200)}
 .ok-box{background:var(--green-l);border:1px solid var(--green-m);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:12px}
 .ok-box strong{display:block;font-size:15px;color:var(--green-d);margin-bottom:4px}
 .ok-box span{font-size:13px;color:var(--green)}
 .sync-line{text-align:center;font-size:12px;color:var(--g400);margin-bottom:14px}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
-.dot-ok{background:var(--green-m)}.dot-err{background:var(--red)}
+.dot-ok{background:var(--green-m)}
 .err-box{background:var(--red-l);border:1px solid #F7C1C1;border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:12px}
 .empty-state{text-align:center;padding:28px 16px;color:var(--g400)}
-.empty-state svg{margin-bottom:12px;opacity:.35}
+.empty-state svg{margin-bottom:12px;opacity:.35;display:block;margin-left:auto;margin-right:auto}
 .empty-state p{font-size:14px}
 .stitle{font-size:11px;font-weight:600;color:var(--g400);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
 .log-item{padding:12px 0;border-bottom:1px solid var(--g100)}
 .log-name{font-size:14px;font-weight:500;color:var(--g900);margin-bottom:4px}
 .log-meta{display:flex;justify-content:space-between;align-items:center}
 .log-info{font-size:12px;color:var(--g400)}
-.log-obs{font-size:11px;color:var(--g400);font-style:italic;margin-top:3px}
-.footer-nav{background:#fff;border-top:1px solid var(--g100);padding:10px 20px 18px;display:flex;justify-content:space-around}
+.footer-nav{background:#fff;border-top:1px solid var(--g100);padding:10px 20px 18px;display:flex;justify-content:space-around;flex-shrink:0}
 .fnav-btn{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--g400);font-size:10px;font-family:var(--font);text-transform:uppercase;letter-spacing:.4px;padding:4px 12px;border-radius:var(--rs)}
 .fnav-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8}
-.fnav-btn:active{background:var(--g50)}
 </style>
 </head>
 <body>
 
-<!-- Scanner modal -->
-<div class="scanner-modal" id="scanModal">
-  <div class="scanner-inner">
-    <video id="scanVideo" playsinline muted></video>
-    <div class="scanner-frame">
-      <div class="scan-line"></div>
+<!-- ── SCANNER MODAL ── -->
+<div class="scan-modal" id="scanModal">
+  <div class="scan-topbar">
+    <span>Escanear código</span>
+    <button class="scan-close" onclick="closeScanner()">Cancelar</button>
+  </div>
+  <div class="scan-viewport">
+    <div id="scan-video"></div>
+    <div class="scan-overlay">
+      <div class="scan-frame">
+        <div class="scan-corner sc-tl"></div>
+        <div class="scan-corner sc-tr"></div>
+        <div class="scan-corner sc-bl"></div>
+        <div class="scan-corner sc-br"></div>
+        <div class="scan-line"></div>
+        <div class="scan-result" id="scanFlash"></div>
+      </div>
     </div>
-    <div class="scan-result-flash" id="scanFlash"></div>
   </div>
-  <div class="scanner-label">
-    Apunta la cámara al código de barras
-    <small>El escaneo es automático</small>
+  <div class="scan-hint-bar">
+    <p>Centra el código dentro del recuadro</p>
+    <small>El escaneo es automático · Mantén firme la tablet</small>
   </div>
-  <button class="close-scan" onclick="closeScanner()">Cancelar</button>
 </div>
 
-<!-- CONFIG -->
+<!-- ── CONFIG ── -->
 <div class="screen active" id="scfg">
   <div class="app-header">
     <h1>Nicolás Market</h1>
@@ -183,7 +218,7 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
   </div>
 </div>
 
-<!-- MAIN -->
+<!-- ── MAIN ── -->
 <div class="screen" id="scmain">
   <div class="app-header" style="padding-bottom:16px">
     <h1>Nicolás Market</h1>
@@ -195,19 +230,24 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
       <div class="stat"><div class="stat-v" id="s-cnt">0</div><div class="stat-l">Contados</div></div>
       <div class="stat"><div class="stat-v" id="s-dif">0</div><div class="stat-l">Diferencias</div></div>
     </div>
-    <div class="stitle">Escanear producto</div>
+
+    <div class="stitle">Buscar producto</div>
     <div class="field">
       <div class="bc-row">
-        <input type="text" id="inp-bc" placeholder="Código de barras..." inputmode="numeric" autocomplete="off" autocorrect="off">
-        <button class="cam-btn" onclick="openScanner()" title="Escanear con cámara">
+        <input type="text" id="inp-bc" placeholder="Código de barras..." inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off">
+        <button class="search-btn" onclick="doLookup()">Buscar</button>
+        <button class="cam-btn" onclick="openScanner()" title="Cámara">
           <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         </button>
       </div>
+      <p class="bc-hint">Escribe el código completo y toca <strong>Buscar</strong> — o usa la cámara</p>
     </div>
+
     <div id="pdisplay" class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M18 14h3M14 18v3M18 18h3v3"/></svg>
-      <p>Escanea o escribe el código de barras</p>
+      <p>Ingresa el código y toca Buscar<br>o usa el botón de cámara</p>
     </div>
+
     <div id="cntarea" style="display:none">
       <div class="card">
         <div class="stitle" style="margin-bottom:6px">Cantidad encontrada</div>
@@ -231,6 +271,7 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
         Guardar en Google Sheets
       </button>
     </div>
+
     <div id="okarea" style="display:none">
       <div class="ok-box">
         <strong>✓ Guardado en Google Sheets</strong>
@@ -243,6 +284,7 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
       </button>
     </div>
   </div>
+
   <div class="footer-nav">
     <button class="fnav-btn" onclick="show('scmain')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -263,7 +305,7 @@ textarea{min-height:72px;resize:vertical;font-size:14px}
   </div>
 </div>
 
-<!-- LOG -->
+<!-- ── LOG ── -->
 <div class="screen" id="sclog">
   <div class="app-header">
     <h1>Nicolás Market</h1>
@@ -287,107 +329,201 @@ var CAT={
   '7501055332175':{n:'Coca Cola No Retornable 355ml',p:'355ml',c:'Bebidas',v:'Zorro',s:'4'},
   '7501055313532':{n:'Coca Cola 1.75 lt',p:'1.75lt',c:'Bebidas',v:'Coca Cola',s:'8'},
   '7501055371655':{n:'Coca Cola 1350ml',p:'1350ml',c:'Bebidas',v:'Coca Cola',s:'4'},
+  '7501055356256':{n:'Coca Cola Sin Azucar Chubby 355ml',p:'355ml',c:'Bebidas',v:'Coca Cola',s:'10'},
+  '7501055320639':{n:'Coca-Cola Zero 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'27'},
   '7503006897016':{n:'Red Cola 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'2'},
   '793573950079':{n:'Red Cola 3 lts',p:'3lt',c:'Bebidas',v:'Red Cola',s:'8'},
   '7501055307906':{n:'Agua Ciel 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'5'},
+  '7501055310883':{n:'Agua Ciel 1lt',p:'1lt',c:'Bebidas',v:'Coca Cola',s:'13'},
   '7501055313006':{n:'Agua Ciel 10 lt',p:'10lt',c:'Bebidas',v:'Coca Cola',s:'9'},
   '7501086801121':{n:'Agua Epura 600ml',p:'600ml',c:'Bebidas',v:'Pepsi',s:'14'},
   '7501086800636':{n:'Agua Epura 2lt',p:'2lt',c:'Bebidas',v:'Pepsi',s:'13'},
+  '7501086801046':{n:'Agua Epura 1lt',p:'1lt',c:'Bebidas',v:'Pepsi',s:'11'},
   '758104000159':{n:'Agua Bonafont 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'2'},
+  '758104100422':{n:'Agua Bonafont 1lt',p:'1lt',c:'Bebidas',v:'Zorro',s:'0'},
   '7501125104268':{n:'Electrolit Fresa 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'3'},
   '7501125104411':{n:'Electrolit Coco 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'0'},
   '7501125174797':{n:'Electrolit Mora Azul 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '7501125104688':{n:'Electrolit Naranja Mandarina 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'2'},
+  '7501125144851':{n:'Electrolit Uva 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'4'},
   '7501022009321':{n:'Pepsi 1.75lt',p:'1.75lt',c:'Bebidas',v:'Pepsi',s:'8'},
   '7501031310012':{n:'Pepsi 600ml',p:'600ml',c:'Bebidas',v:'Pepsi',s:'30'},
+  '7501022013052':{n:'Pepsi Black 600ml',p:'600ml',c:'Bebidas',v:'Pepsi',s:'17'},
   '7501055339983':{n:'Sidral Mundet 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'16'},
+  '7501055340422':{n:'Sidral Mundet 3lt',p:'3lt',c:'Bebidas',v:'Coca Cola',s:'4'},
   '7501073839885':{n:'Peñafiel Limonada 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'12'},
   '7501073839854':{n:'Peñafiel Naranjada 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'12'},
+  '7501073831469':{n:'Peñafiel Twist 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'10'},
+  '7501073830509':{n:'Peñafiel Agua Mineral 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'7'},
   '744886288823':{n:'Jarritos Limon 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'10'},
   '744886308828':{n:'Jarritos Piña 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'8'},
   '744886318827':{n:'Jarritos Tutti Frutti 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'7'},
+  '744886328826':{n:'Jarritos Tamarindo 600ml',p:'600ml',c:'Bebidas',v:'Red Cola',s:'0'},
+  '7503006897603':{n:'Jarritos Uva 600ml',p:'600ml',c:'Bebidas',v:'Red Cola',s:'7'},
+  '7501055303779':{n:'Fanta 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'7'},
+  '7501055305629':{n:'Sprite 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'8'},
   '7500810029183':{n:'Bimbo Pan Blanco 620g',p:'620g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'1'},
   '7501000111602':{n:'Bimbo Pan Hamburguesa 8pz',p:'450g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'2'},
   '7501000111503':{n:'Pan Medias Noches Hot Dog',p:'340g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'4'},
   '7500810032978':{n:'Bimbo Integral Chico 300g',p:'300g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'5'},
+  '7500810022061':{n:'Bimbo Integral Grande 620g',p:'620g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'1'},
   '75044916':{n:'Marlboro Kretek Mint 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'3 paq 2 pz'},
-  '75001339':{n:'Marlboro Rojo 14pza',p:'14pza',c:'Cigarros',v:'Zorro',s:'2 paq'},
+  '75068783':{n:'Marlboro Double Fusion Ruby 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'2 paq 13 pz'},
   '75068738':{n:'Marlboro Gold 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'3 paq 1 pz'},
+  '75066345':{n:'Marlboro Fusion Summer 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'2 pz'},
+  '75001339':{n:'Marlboro Rojo 14pza',p:'14pza',c:'Cigarros',v:'Zorro',s:'2 paq'},
   '75021597':{n:'Marlboro Rojo 100s 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'1 paq 15 pz'},
+  '75001322':{n:'Marlboro Rojo Cajetilla 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'18 pz'},
   '75019006':{n:'Marlboro Caribbean Fusion 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'11 pz'},
+  '75074746':{n:'Marlboro Blossom Mist 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'2 paq 14 pz'},
   '75064648':{n:'Pall Mall Mykonos Nightfall 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'1 paq 18 pz'},
   '75071295':{n:'Pall Mall Alaska Menta 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'1 paq 9 pz'},
   '75080518':{n:'Pall Mall Osaka 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 3 pz'},
   '75080525':{n:'Pall Mall Honolulu Sandia 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 11 pz'},
+  '75080495':{n:'Pall Mall Iceland 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'6 paq 2 pz'},
+  '75076429':{n:'Pall Mall Hawaii Sandia 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'3 paq 3 pz'},
   '75064716':{n:'Lucky Strike 20 cigarros',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 11 pz'},
+  '75076405':{n:'Montana Shots Classics 14pz',p:'14pz',c:'Cigarros',v:'British American Tobacco',s:'3 paq'},
+  '75082239':{n:'Montana Blanco 25pz',p:'25pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 20 pz'},
+  '75064747':{n:'Montana Shots 15pz',p:'15pz',c:'Cigarros',v:'British American Tobacco',s:'4 paq 4 pz'},
+  '75064754':{n:'Montana Blancos Shots 25pz',p:'25pz',c:'Cigarros',v:'British American Tobacco',s:'4 paq 9 pz'},
   '7501040091407':{n:'Yoghurt Beber Fresa 220g',p:'220g',c:'Lácteos',v:'Sigma',s:'7'},
   '7501040075711':{n:'Yoplait Yogurt Fresa 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'5'},
   '7501040098116':{n:'Yoplait Griego Fresa 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'7'},
   '7501040098123':{n:'Yoplait Griego Moras 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'10'},
-  '7501295600126':{n:'Leche Santa Clara Entera 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'1'},
-  '7501020526066':{n:'Lala Leche Entera 1lt',p:'1lt',c:'Lácteos',v:'Lala',s:'0'},
-  '7501020527278':{n:'Lala Leche Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'8'},
+  '7501040075650':{n:'Yoplait Griego Natural Sin Azucar 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'7'},
+  '7501040093142':{n:'Yoplait Griego Natural 442g',p:'442g',c:'Lácteos',v:'Sigma',s:'1'},
+  '7501040091230':{n:'Yoghurt Beber Piña-Coco 220ml',p:'220ml',c:'Lácteos',v:'Sigma',s:'8'},
+  '7501040091223':{n:'Yoghurt Beber Durazno 220ml',p:'220ml',c:'Lácteos',v:'Sigma',s:'2'},
+  '7501040091124':{n:'Yoplait Bebible Fresa 330g',p:'330g',c:'Lácteos',v:'Sigma',s:'3'},
   '7501040086885':{n:'Yoplait Crema Entera Acida 400ml',p:'400ml',c:'Lácteos',v:'Sigma',s:'2'},
   '7501040086878':{n:'Yoplait Crema Acidificada 180g',p:'180g',c:'Lácteos',v:'Sigma',s:'3'},
+  '7501295600126':{n:'Leche Santa Clara Entera 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'1'},
+  '7501295600157':{n:'Leche Santa Clara Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
+  '7501020526066':{n:'Lala Leche Entera 1lt',p:'1lt',c:'Lácteos',v:'Lala',s:'0'},
+  '7501020527278':{n:'Lala Leche Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'8'},
+  '7501020565935':{n:'Lala Entera UHT 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'4'},
+  '7501055900039':{n:'Alpura Clasica 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
+  '7501055901425':{n:'Alpura Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'6'},
   '7501055909520':{n:'Crema Alpura 200ml',p:'200ml',c:'Lácteos',v:'Zorro',s:'0'},
   '7501055919390':{n:'Alpura Crema Acida 190ml',p:'190ml',c:'Lácteos',v:'Zorro',s:'5'},
+  '7501020513134':{n:'Crema Lala 200ml',p:'200ml',c:'Lácteos',v:'Lala',s:'5'},
   '7622202308871':{n:'Trident 14s Menta Caja',p:'33.6g',c:'Dulces y Chicles',v:'Mondelez',s:'1'},
   '75073244':{n:'Bubbaloo Fresa',p:'pza',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'57'},
+  '75073282':{n:'Bubbaloo Tutti Frutti',p:'pza',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'31'},
+  '75073275':{n:'Bubbaloo Platano',p:'pza',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'51'},
   '75045616':{n:'Trident Hierbabuena 4pz',p:'4pz',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'49'},
   '75045623':{n:'Trident Menta 1pz',p:'1pz',c:'Dulces y Chicles',v:'Mondelez',s:'37'},
+  '75045685':{n:'Trident Mora Azul 1pz',p:'1pz',c:'Dulces y Chicles',v:'Mondelez',s:'16'},
+  '75066932':{n:'Trident Canela 4pz',p:'4pz',c:'Dulces y Chicles',v:'Mondelez',s:'15'},
+  '7501063504106':{n:'Tutsi Pop Paleta Vitrolero 110pz',p:'110pz',c:'Dulces y Chicles',v:'(vitrolero)',s:'56'},
   '7500810003671':{n:'Barcel Takis Fuego 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'5'},
   '7500810000465':{n:'Takis Fuego 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'8'},
   '7500810028353':{n:'Takis Blue Heat 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'5'},
+  '7500810041307':{n:'Takis Intense Nacho 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'2'},
   '7501030448242':{n:'Takis Fuego 35g',p:'35g',c:'Pan y Botanas',v:'Zorro',s:'24'},
   '7501011123588':{n:'Doritos Nachos 61g',p:'61g',c:'Pan y Botanas',v:'Sabritas',s:'8'},
   '7500478024940':{n:'Doritos Nacho 54g',p:'54g',c:'Pan y Botanas',v:'Zorro',s:'15'},
   '7500478046706':{n:'Ruffles Mega Crunch Salsa Roja 50g',p:'50g',c:'Pan y Botanas',v:'Sabritas',s:'4'},
   '7500478044221':{n:'Ruffles Queso 48g',p:'48g',c:'Pan y Botanas',v:'Sabritas',s:'5'},
+  '7500810013564':{n:'Barcel Pop Palomitas Queso 45g',p:'45g',c:'Pan y Botanas',v:'Barcel',s:'1'},
+  '7500810027813':{n:'Barcel Toreadas Habanero 45g',p:'45g',c:'Pan y Botanas',v:'Barcel',s:'2'},
+  '7500810024553':{n:'Chips Jalapeño 62g',p:'62g',c:'Pan y Botanas',v:'Barcel',s:'13'},
+  '7500810024560':{n:'Barcel Chips Sal 62g',p:'62g',c:'Pan y Botanas',v:'Barcel',s:'11'},
   '7501040002649':{n:'Jamon Americano Fud kg',p:'kg',c:'Refrigerados/Fríos',v:'Sigma',s:'2.811 kg'},
-  '7501040023644':{n:'Fud Jamon de Pavo 196g',p:'196g',c:'Refrigerados/Fríos',v:'Sigma',s:'2'},
+  '7501040023644':{n:'Fud Jamon Pavo Americano 196g',p:'196g',c:'Refrigerados/Fríos',v:'Sigma',s:'2'},
+  '7501040023545':{n:'Fud Jamon Pavo y Cerdo 196g',p:'196g',c:'Refrigerados/Fríos',v:'Sigma',s:'4'},
   '7501040083808':{n:'Queso Americano Fud 180g',p:'180g',c:'Refrigerados/Fríos',v:'Sigma',s:'2'},
+  '7501040083815':{n:'Fud Queso Manchego 10 Reb 180g',p:'180g',c:'Refrigerados/Fríos',v:'Sigma',s:'2 paq 3 pz'},
   '7622210574091':{n:'Philadelphia Queso Crema 120g',p:'120g',c:'Refrigerados/Fríos',v:'Sigma',s:'0'},
+  '7622210561558':{n:'Philadelphia Barra 180g',p:'180g',c:'Refrigerados/Fríos',v:'Zorro',s:'3'},
   '7501040081477':{n:'La Villita Queso Amarillo 175g',p:'175g',c:'Refrigerados/Fríos',v:'Sigma',s:'5 paq 6 pz'},
   '7501040023989':{n:'San Rafael Jamon Real 250g',p:'250g',c:'Refrigerados/Fríos',v:'Sigma',s:'3'},
+  '7501040027499':{n:'San Rafael Salchicha Pavo 500g',p:'500g',c:'Abarrotes Básicos',v:'Sigma',s:'2 paq 2 pz'},
+  '7501040009761':{n:'Salchicha Pavo Fud 266g',p:'266g',c:'Abarrotes Básicos',v:'Zorro',s:'3 paq'},
+  '7501040009754':{n:'Salchicha Viena 266g',p:'266g',c:'Abarrotes Básicos',v:'Sigma',s:'8 paq'},
   '7501052420431':{n:'La Sierra Frijoles Bayos 580g',p:'580g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '7501052420424':{n:'Frijoles Negros Refritos La Sierra 580g',p:'580g',c:'Abarrotes Básicos',v:'Zorro',s:'4'},
   '7501017042920':{n:'Frijoles Bayos La Costeña 430g',p:'430g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
+  '7501017042937':{n:'Frijoles Negros La Costeña 430g',p:'430g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
   '7506306307209':{n:'Knorr Arroz a la Mexicana 155g',p:'155g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
   '7501018310035':{n:'Fideo La Moderna No.2 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
   '7501018310547':{n:'Pasta Codo La Moderna No.4 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
+  '7501018310523':{n:'Pasta Codo La Moderna No.2 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'4'},
   '7501039127469':{n:'Nutrioli Pasta Spaguetti 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
   '41789001956':{n:'Maruchan Camaron 64g',p:'64g',c:'Sopas Instantáneas',v:'Zorro',s:'1'},
   '41789001925':{n:'Maruchan Res 64g',p:'64g',c:'Sopas Instantáneas',v:'Huevo GARCES',s:'5'},
+  '41789001154':{n:'Maruchan Habanero 64g',p:'64g',c:'Sopas Instantáneas',v:'Zorro',s:'0'},
+  '41789001840':{n:'Maruchan Pollo Picante 64g',p:'64g',c:'Sopas Instantáneas',v:'Zorro',s:'2'},
   '7503020651823':{n:'Cup Noodles Birria 64g',p:'64g',c:'Abarrotes Básicos',v:'Zorro',s:'0'},
   '7506192503358':{n:'Gel Ego Diez 200ml',p:'200ml',c:'Higiene Personal',v:'Zorro',s:'0'},
   '7506192502603':{n:'Shampoo Savile Savila Miel 180ml',p:'180ml',c:'Higiene Personal',v:'Zorro',s:'3'},
   '7506192503426':{n:'Shampoo Savile Keratina 180ml',p:'180ml',c:'Higiene Personal',v:'Zorro',s:'3'},
   '7501035910096':{n:'Fabuloso Fresco Amanecer 1lt',p:'1lt',c:'Limpieza',v:'Zorro',s:'1'},
+  '7509546008202':{n:'Fabuloso Energia Naranja 1lt',p:'1lt',c:'Limpieza',v:'Zorro',s:'2'},
+  '7501035910041':{n:'Fabuloso Mar Fresco 1lt',p:'1lt',c:'Limpieza',v:'Zorro',s:'2'},
   '7501071900112':{n:'Clorox Concentrado 500ml',p:'500ml',c:'Limpieza',v:'Zorro',s:'1'},
   '7501071900129':{n:'Clorox 930ml',p:'930ml',c:'Limpieza',v:'Zorro',s:'2'},
   '7501026004612':{n:'Jabon Roma 500g',p:'500g',c:'Limpieza',v:'Zorro',s:'1'},
   '7501026004605':{n:'Roma Detergente 1000g',p:'1000g',c:'Limpieza',v:'Zorro',s:'3'},
+  '7501026004629':{n:'Roma Detergente 250g',p:'250g',c:'Limpieza',v:'Zorro',s:'4'},
+  '7501026005381':{n:'Jabon Zote 200g',p:'200g',c:'Limpieza',v:'Zorro',s:'3'},
+  '7501026005671':{n:'Jabon Zote 400g',p:'400g',c:'Limpieza',v:'Zorro',s:'4'},
   '7503003924517':{n:'Veladora Fino Limonero Vaso',p:'1pza',c:'Limpieza',v:'Zorro',s:'0'},
   '7501557207209':{n:'Veladora Aramo 30Hrs',p:'1pza',c:'Limpieza',v:'Zorro',s:'3'},
   '8719200450523':{n:'Iberia Margarina sin Sal 225g',p:'225g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
   '7501056342227':{n:'Crema Peinar Sedal Rizos 135ml',p:'135ml',c:'Higiene Personal',v:'Zorro',s:'0'},
-  '7501295600157':{n:'Leche Santa Clara Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
   '7501480700075':{n:'Tehuacan Agua Mineral 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'0'},
   '7501059235441':{n:'Agua Santa Maria 1lt',p:'1lt',c:'Bebidas',v:'Zorro',s:'1'},
   '7501062700042':{n:'La Morena Jalapeños 210g',p:'210g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
-  '7501003105486':{n:'Atun Herdez en Agua 130g',p:'130g',c:'Bebidas',v:'Zorro',s:'2'},
+  '7501003105486':{n:'Atun Herdez en Agua 130g',p:'130g',c:'Abarrotes Básicos',v:'Zorro',s:'2'},
   '7506192505802':{n:'Riko Pollo 3 Cubos 33g',p:'33g',c:'Sopas Instantáneas',v:'Zorro',s:'43'},
   '7501005180306':{n:'Knorr Caldo Pollo 2 Cubos',p:'2pz',c:'Sopas Instantáneas',v:'Zorro',s:'72 paq 1 pz'},
-  '7501026005381':{n:'Jabon Zote 200g',p:'200g',c:'Limpieza',v:'Zorro',s:'3'},
-  '7501026004629':{n:'Roma Detergente 250g',p:'250g',c:'Limpieza',v:'Zorro',s:'4'},
   '7501020565911':{n:'Lala Leche Deslactosada Slim 1lt',p:'1lt',c:'Lácteos',v:'Lala',s:'-1'},
-  '7501020565935':{n:'Lala Entera Leche UHT 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'4'},
-  '7501055900039':{n:'Alpura Clasica 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
-  '7501055901425':{n:'Alpura Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'6'},
+  '7501055910250':{n:'Leche Alpura Clasica 1.5lt',p:'1.5lt',c:'Lácteos',v:'Pepsi',s:'5'},
+  '7506475116893':{n:'Nestle Trix Malvaviscos 230g',p:'230g',c:'Otros',v:'Sin registro',s:'1'},
+  '7501013104066':{n:'Jumex Durazno 960ml',p:'960ml',c:'Bebidas',v:'Zorro',s:'5'},
+  '7501013104073':{n:'Jumex Manzana 960ml',p:'960ml',c:'Bebidas',v:'Zorro',s:'3'},
+  '7501013105551':{n:'Jumex Mango 413ml',p:'413ml',c:'Bebidas',v:'Zorro',s:'3'},
+  '75003135':{n:'Boing Guayaba 500ml',p:'500ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '75003166':{n:'Boing Fresa 500ml',p:'500ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '75003180':{n:'Boing Uva 500ml',p:'500ml',c:'Bebidas',v:'Zorro',s:'7'},
+  '75003104':{n:'Boing Mango 500ml',p:'500ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '75003173':{n:'Boing Naranja 500ml',p:'500ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '75001834':{n:'Boing Uva 250ml',p:'250ml',c:'Bebidas',v:'Zorro',s:'9'},
+  '7501040097027':{n:'Flan Horneado 2 Pack 220g YPT',p:'220g',c:'Lácteos',v:'Sigma',s:'1'},
+  '7501040098598':{n:'Yoplait Pay de Queso 200g',p:'200g',c:'Refrigerados/Fríos',v:'Sigma',s:'1'},
+  '7501040076015':{n:'Yoplait Disfruta Chocogalleta 307g',p:'307g',c:'Otros',v:'Sigma',s:'1'},
+  '7501040070778':{n:'Cafe Ole Cappuccino Original 330ml',p:'330ml',c:'Otros',v:'Sigma',s:'3'},
+  '7501040070761':{n:'Cafe Ole Cappuccino Moka Carton 330ml',p:'330ml',c:'Otros',v:'Sigma',s:'4'},
+  '7501077506622':{n:'Noche Buena Mantequilla sin Sal 90g',p:'90g',c:'Abarrotes Básicos',v:'Sigma',s:'5'},
+  '7501040082146':{n:'Margarina sin Sal LVI 90g',p:'90g',c:'Abarrotes Básicos',v:'Sigma',s:'6'},
+  '7501040075698':{n:'Yoplait Durazno Natural 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'2'},
+  '7501040075704':{n:'Yoplait Yoghurt Natural 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'9'},
+  '7501040075728':{n:'Yoplait Frutas y Cereales 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'2'},
+  '7501040093197':{n:'Yoplait Licuado de Fresa 330g',p:'330g',c:'Lácteos',v:'Sigma',s:'2'},
+  '7501040093838':{n:'Yoplait Licuado Nuez 330g',p:'330g',c:'Lácteos',v:'Sigma',s:'3'},
+  '7501040098109':{n:'Yoplait Griego Natural 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'4'},
+  '7501040097539':{n:'Yoplait Griego Sin Azucar Natural 442g',p:'442g',c:'Lácteos',v:'Sigma',s:'6'},
+  '7622210561558':{n:'Philadelphia Barra 180g',p:'180g',c:'Refrigerados/Fríos',v:'Zorro',s:'3'},
+  '7501040083884':{n:'Queso Manchego Rebanadas Fud 190g',p:'190g',c:'Refrigerados/Fríos',v:'Sigma',s:'0'},
+  '7500435241021':{n:'Pantene Keratina 160ml',p:'160ml',c:'Pan y Botanas',v:'Zorro',s:'3'},
+  '7506195196984':{n:'Shampoo Head and Shoulders 90ml',p:'90ml',c:'Higiene Personal',v:'Zorro',s:'3'},
+  '7509546016306':{n:'Suavitel Fresca Primavera 850ml',p:'850ml',c:'Limpieza',v:'Zorro',s:'0'},
+  '7509546016313':{n:'Suavitel Aroma de Sol 850ml',p:'850ml',c:'Limpieza',v:'Zorro',s:'2'},
+  '7509546043579':{n:'Suavitel Baby 850ml',p:'850ml',c:'Limpieza',v:'Zorro',s:'2'},
+  '7500435120852':{n:'Ariel Aroma Original 850g',p:'850g',c:'Limpieza',v:'Zorro',s:'2'},
+  '7501007455730':{n:'Ariel Doble Poder 500g',p:'500g',c:'Limpieza',v:'Zorro',s:'3'},
+  '7501019006647':{n:'Saba Ultra Con Alas 10pz',p:'10pz',c:'Otros',v:'Zorro',s:'4'},
+  '7501019068416':{n:'Saba Protectores Regular 16pz',p:'16pz',c:'Otros',v:'Zorro',s:'3'},
+  '75009076':{n:'Dany Gelatina Fresa 125g',p:'125g',c:'Bebidas',v:'Danone',s:'0'},
+  '7500907':{n:'Gelatina Dany Fresa 125g',p:'125g',c:'Higiene Personal',v:'Danone',s:'8'},
+  '75009083':{n:'Gelatina Dany Piña 125g',p:'125g',c:'Higiene Personal',v:'Danone',s:'6'},
 };
 
 var S={name:'',area:'',counts:[],withDiff:0};
 var cur=null;
-var codeReader=null;
-var scanActive=false;
+var scanning=false;
 
 function show(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
@@ -408,68 +544,97 @@ function startApp(){
   setTimeout(function(){document.getElementById('inp-bc').focus()},200);
 }
 
-// ── Barcode input ──
-var bcTimer;
-document.getElementById('inp-bc').addEventListener('input',function(){
-  clearTimeout(bcTimer);
-  var v=this.value.trim();
-  bcTimer=setTimeout(function(){if(v)lookup(v)},380);
-});
+// Solo busca al presionar Enter o el botón Buscar — NO automático
 document.getElementById('inp-bc').addEventListener('keydown',function(e){
-  if(e.key==='Enter'){clearTimeout(bcTimer);lookup(this.value.trim())}
+  if(e.key==='Enter'){e.preventDefault();doLookup()}
 });
+
+function doLookup(){
+  var code=document.getElementById('inp-bc').value.trim();
+  if(!code)return;
+  lookup(code);
+}
+
 document.getElementById('inp-cnt').addEventListener('input',updDiff);
 
-// ── Camera scanner ──
+// ── Quagga scanner ──
 function openScanner(){
-  if(typeof ZXing==='undefined'){
-    alert('El escáner de cámara está cargando, intenta en unos segundos.');return;
+  if(typeof Quagga==='undefined'){
+    alert('El escáner está cargando, espera unos segundos e intenta de nuevo.');return;
   }
   document.getElementById('scanModal').classList.add('open');
-  if(!codeReader) codeReader=new ZXing.BrowserMultiFormatReader();
-  scanActive=true;
-  codeReader.listVideoInputDevices().then(function(devices){
-    var deviceId=null;
-    // Prefer back camera
-    for(var i=0;i<devices.length;i++){
-      var lbl=(devices[i].label||'').toLowerCase();
-      if(lbl.includes('back')||lbl.includes('rear')||lbl.includes('trasera')||lbl.includes('environment')){
-        deviceId=devices[i].deviceId;break;
+  scanning=true;
+
+  Quagga.init({
+    inputStream:{
+      type:'LiveStream',
+      target:document.getElementById('scan-video'),
+      constraints:{
+        facingMode:'environment',
+        width:{ideal:1280},
+        height:{ideal:720}
       }
+    },
+    locator:{patchSize:'medium',halfSample:true},
+    numOfWorkers:2,
+    frequency:10,
+    decoder:{
+      readers:[
+        'ean_reader',
+        'ean_8_reader',
+        'code_128_reader',
+        'code_39_reader',
+        'upc_reader',
+        'upc_e_reader'
+      ],
+      multiple:false
+    },
+    locate:true
+  },function(err){
+    if(err){
+      closeScanner();
+      alert('No se pudo acceder a la cámara. Verifica que el navegador tiene permiso en Configuración → Privacidad → Cámara.');
+      return;
     }
-    if(!deviceId && devices.length>0) deviceId=devices[devices.length-1].deviceId;
-    var constraints=deviceId
-      ?{deviceId:{exact:deviceId}}
-      :{facingMode:{ideal:'environment'}};
-    return codeReader.decodeFromConstraints({video:constraints},'scanVideo',function(result,err){
-      if(!scanActive) return;
-      if(result){
-        // Flash effect
-        var fl=document.getElementById('scanFlash');
-        fl.style.opacity='1';
-        setTimeout(function(){fl.style.opacity='0'},200);
-        var code=result.getText();
-        closeScanner();
-        document.getElementById('inp-bc').value=code;
-        lookup(code);
-      }
-    });
-  }).catch(function(e){
-    closeScanner();
-    alert('No se pudo acceder a la cámara. Asegúrate de dar permiso cuando el navegador lo pida.');
-    console.error(e);
+    Quagga.start();
+  });
+
+  // Confidence filter — solo acepta lecturas con alta confianza
+  var lastCode='';
+  var sameCount=0;
+  Quagga.onDetected(function(result){
+    if(!scanning)return;
+    var code=result.codeResult.code;
+    var confidence=result.codeResult.decodedCodes
+      .filter(function(x){return x.error!==undefined})
+      .reduce(function(sum,x){return sum+x.error},0);
+    // Requiere que el mismo código se detecte 3 veces seguidas
+    if(code===lastCode){
+      sameCount++;
+    } else {
+      lastCode=code;sameCount=1;
+    }
+    if(sameCount>=3){
+      // Flash visual
+      var fl=document.getElementById('scanFlash');
+      fl.style.opacity='1';
+      setTimeout(function(){fl.style.opacity='0'},250);
+      closeScanner();
+      document.getElementById('inp-bc').value=code;
+      lookup(code);
+      lastCode='';sameCount=0;
+    }
   });
 }
 
 function closeScanner(){
-  scanActive=false;
+  scanning=false;
   document.getElementById('scanModal').classList.remove('open');
-  if(codeReader){
-    try{codeReader.reset()}catch(e){}
-  }
+  try{Quagga.stop()}catch(e){}
 }
 
 function lookup(code){
+  code=code.trim();
   var p=CAT[code];
   if(p){
     cur={barcode:code,name:p.n,pres:p.p,cat:p.c,prov:p.v,stock:p.s};
@@ -503,7 +668,7 @@ function renderNF(code){
     '<div class="card red">'+
       '<div style="font-size:14px;font-weight:500;color:#A32D2D;margin-bottom:4px">Producto no encontrado en catálogo</div>'+
       '<div style="font-family:var(--mono);font-size:13px;color:#888780;margin-bottom:8px">'+code+'</div>'+
-      '<div style="font-size:13px;color:#5F5E5A">Puedes registrar el conteo igual. El sistema lo marcará para revisión.</div>'+
+      '<div style="font-size:13px;color:#5F5E5A">Puedes registrar el conteo igual. Quedará marcado para revisión.</div>'+
     '</div>';
   resetCnt();
 }
@@ -519,7 +684,7 @@ function resetCnt(){
   btn.innerHTML='<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar en Google Sheets';
   document.getElementById('cntarea').style.display='block';
   document.getElementById('okarea').style.display='none';
-  document.getElementById('inp-cnt').focus();
+  setTimeout(function(){document.getElementById('inp-cnt').focus()},100);
 }
 
 function adj(d){
@@ -529,7 +694,7 @@ function adj(d){
 }
 
 function updDiff(){
-  if(!cur) return;
+  if(!cur)return;
   var cnt=parseInt(document.getElementById('inp-cnt').value)||0;
   var stk=parseFloat((cur.stock||'0').replace(/[^0-9.]/g,''))||0;
   var df=cnt-stk;
@@ -539,7 +704,7 @@ function updDiff(){
 }
 
 function saveCount(){
-  if(!cur) return;
+  if(!cur)return;
   var btn=document.getElementById('btn-save');
   btn.disabled=true;btn.innerHTML='Guardando...';
   var cnt=parseInt(document.getElementById('inp-cnt').value)||0;
@@ -558,9 +723,7 @@ function saveCount(){
     document.getElementById('s-cnt').textContent=S.counts.length;
     document.getElementById('s-dif').textContent=S.withDiff;
     var det=cnt+' pzas';
-    if(df<0)det+=' · falta '+Math.abs(df);
-    else if(df>0)det+=' · sobra '+df;
-    else det+=' · coincide';
+    if(df<0)det+=' · falta '+Math.abs(df);else if(df>0)det+=' · sobra '+df;else det+=' · coincide';
     document.getElementById('ok-detail').textContent=det;
     document.getElementById('ok-time').textContent=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('cntarea').style.display='none';
@@ -570,9 +733,8 @@ function saveCount(){
     S.counts.push(payload);if(df!==0)S.withDiff++;
     document.getElementById('s-cnt').textContent=S.counts.length;
     document.getElementById('s-dif').textContent=S.withDiff;
-    var eb=document.getElementById('save-err');
-    eb.innerHTML='Sin conexión — guardado localmente. Exporta el CSV al terminar.';
-    eb.style.display='block';
+    document.getElementById('save-err').innerHTML='Sin conexión — guardado localmente. Exporta el CSV al terminar.';
+    document.getElementById('save-err').style.display='block';
     btn.disabled=false;
     btn.innerHTML='Guardar en Google Sheets';
   });
@@ -581,10 +743,10 @@ function saveCount(){
 function next(){
   cur=null;
   document.getElementById('inp-bc').value='';
-  document.getElementById('pdisplay').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M18 14h3M14 18v3M18 18h3v3"/></svg><p>Escanea o escribe el código de barras</p></div>';
+  document.getElementById('pdisplay').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M18 14h3M14 18v3M18 18h3v3"/></svg><p>Ingresa el código y toca Buscar<br>o usa el botón de cámara</p></div>';
   document.getElementById('cntarea').style.display='none';
   document.getElementById('okarea').style.display='none';
-  document.getElementById('inp-bc').focus();
+  setTimeout(function(){document.getElementById('inp-bc').focus()},100);
 }
 
 function showLog(){
@@ -598,7 +760,7 @@ function showLog(){
       html+='<div class="log-item"><div class="log-name">'+r.name+'</div>'+
         '<div class="log-meta"><span class="log-info">'+r.cat+' · '+r.ts+'</span>'+
         '<span class="diff-v '+dc+'" style="font-size:14px">'+(r.diff>=0?'+':'')+r.diff+'</span></div>'+
-        (r.obs?'<div class="log-obs">'+r.obs+'</div>':'')+
+        (r.obs?'<div style="font-size:11px;color:#888780;font-style:italic;margin-top:3px">'+r.obs+'</div>':'')+
       '</div>';
     });
   }
