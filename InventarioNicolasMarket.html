@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Inventario · Nicolás Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+<style>
+:root{
+  --green:#0F6E56;--green-l:#E1F5EE;--green-m:#5DCAA5;--green-d:#085041;
+  --red:#A32D2D;--red-l:#FCEBEB;--amber:#854F0B;--amber-l:#FAEEDA;
+  --blue:#185FA5;--blue-l:#E6F1FB;
+  --g50:#F8F8F6;--g100:#EFEFEB;--g200:#D3D1C7;--g400:#888780;--g600:#5F5E5A;--g900:#1A1A18;
+  --r:12px;--rs:8px;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--g50);font-family:var(--font);color:var(--g900)}
+body{display:flex;flex-direction:column;min-height:100vh}
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex}
+.app-header{background:var(--green);color:#fff;padding:48px 20px 18px;flex-shrink:0}
+.app-header h1{font-size:12px;font-weight:500;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
+.app-header h2{font-size:22px;font-weight:600}
+.app-header p{font-size:13px;opacity:.75;margin-top:3px}
+.screen-body{flex:1;padding:18px;overflow-y:auto}
+.card{background:#fff;border:1px solid var(--g100);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card.green{border-left:3px solid var(--green)}
+.card.red{border-left:3px solid var(--red)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid var(--g100);border-radius:var(--rs);padding:12px 14px}
+.stat-v{font-size:26px;font-weight:600;color:var(--g900);line-height:1}
+.stat-l{font-size:11px;color:var(--g400);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+label{display:block;font-size:12px;font-weight:500;color:var(--g600);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}
+input[type=text],input[type=number],select,textarea{
+  width:100%;padding:13px 14px;border:1.5px solid var(--g100);border-radius:var(--rs);
+  font-size:15px;font-family:var(--font);color:var(--g900);background:#fff;outline:none;transition:border-color .15s;-webkit-appearance:none
+}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1)}
+input[type=number]{font-size:28px;font-weight:600;text-align:center;padding:14px}
+textarea{min-height:72px;resize:vertical;font-size:14px}
+.field{margin-bottom:14px}
+
+/* ── Barcode area ── */
+.bc-row{display:flex;gap:8px;align-items:stretch}
+.bc-row input{flex:1;font-family:var(--mono);font-size:15px;letter-spacing:.4px}
+.cam-btn{
+  width:52px;flex-shrink:0;background:var(--green);border:none;border-radius:var(--rs);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s
+}
+.cam-btn:active{background:var(--green-d)}
+.cam-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2}
+
+/* ── Scanner modal ── */
+.scanner-modal{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:flex-start;
+  padding-top:60px
+}
+.scanner-modal.open{display:flex}
+.scanner-inner{position:relative;width:min(320px,90vw)}
+.scanner-inner video{width:100%;border-radius:var(--r);display:block}
+.scanner-frame{
+  position:absolute;inset:0;border-radius:var(--r);pointer-events:none;
+  border:2px solid var(--green-m);box-shadow:0 0 0 9999px rgba(0,0,0,.45)
+}
+.scan-line{
+  position:absolute;left:10%;right:10%;height:2px;background:var(--green-m);
+  animation:scanline 2s ease-in-out infinite;top:10%
+}
+@keyframes scanline{0%,100%{top:10%}50%{top:88%}}
+.scanner-label{color:#fff;font-size:14px;text-align:center;margin-top:16px;opacity:.8}
+.scanner-label small{display:block;font-size:12px;margin-top:4px;opacity:.6}
+.close-scan{
+  margin-top:20px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  color:#fff;padding:12px 32px;border-radius:24px;font-size:14px;font-family:var(--font);cursor:pointer
+}
+.close-scan:active{background:rgba(255,255,255,.2)}
+.scan-result-flash{
+  position:absolute;inset:0;border-radius:var(--r);background:rgba(93,202,165,.3);
+  opacity:0;transition:opacity .2s;pointer-events:none
+}
+
+/* ── Counter ── */
+.counter-row{display:flex;gap:10px;align-items:center}
+.adj-btn{
+  width:52px;height:52px;flex-shrink:0;background:var(--g100);border:none;border-radius:var(--rs);
+  font-size:26px;color:var(--g600);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .1s
+}
+.adj-btn:active{background:var(--g200);transform:scale(.94)}
+.diff-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--g100);margin-top:10px}
+.diff-lbl{font-size:13px;color:var(--g400)}
+.diff-v{font-size:18px;font-weight:600}
+.dn{color:var(--red)}.dp{color:var(--green)}.dz{color:var(--blue)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;margin-top:6px}
+.bok{background:var(--green-l);color:var(--green-d)}.blow{background:var(--amber-l);color:var(--amber)}.bzero{background:var(--red-l);color:var(--red)}
+.pinfo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pi{background:var(--g50);border-radius:var(--rs);padding:8px 10px}
+.pi-l{font-size:10px;color:var(--g400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.pi-v{font-size:13px;font-weight:500;color:var(--g900)}
+
+/* ── Buttons ── */
+.btn{
+  width:100%;padding:15px;font-size:15px;font-weight:600;border-radius:var(--r);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,background .15s;
+  font-family:var(--font);margin-bottom:10px
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--green);color:#fff}.btn-primary:hover{background:var(--green-d)}
+.btn-primary:disabled{background:var(--green-m);cursor:not-allowed}
+.btn-outline{background:#fff;color:var(--g900);border:1.5px solid var(--g200)}.btn-outline:hover{background:var(--g50)}
+.ok-box{background:var(--green-l);border:1px solid var(--green-m);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:12px}
+.ok-box strong{display:block;font-size:15px;color:var(--green-d);margin-bottom:4px}
+.ok-box span{font-size:13px;color:var(--green)}
+.sync-line{text-align:center;font-size:12px;color:var(--g400);margin-bottom:14px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.dot-ok{background:var(--green-m)}.dot-err{background:var(--red)}
+.err-box{background:var(--red-l);border:1px solid #F7C1C1;border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:12px}
+.empty-state{text-align:center;padding:28px 16px;color:var(--g400)}
+.empty-state svg{margin-bottom:12px;opacity:.35}
+.empty-state p{font-size:14px}
+.stitle{font-size:11px;font-weight:600;color:var(--g400);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
+.log-item{padding:12px 0;border-bottom:1px solid var(--g100)}
+.log-name{font-size:14px;font-weight:500;color:var(--g900);margin-bottom:4px}
+.log-meta{display:flex;justify-content:space-between;align-items:center}
+.log-info{font-size:12px;color:var(--g400)}
+.log-obs{font-size:11px;color:var(--g400);font-style:italic;margin-top:3px}
+.footer-nav{background:#fff;border-top:1px solid var(--g100);padding:10px 20px 18px;display:flex;justify-content:space-around}
+.fnav-btn{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--g400);font-size:10px;font-family:var(--font);text-transform:uppercase;letter-spacing:.4px;padding:4px 12px;border-radius:var(--rs)}
+.fnav-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8}
+.fnav-btn:active{background:var(--g50)}
+</style>
+</head>
+<body>
+
+<!-- Scanner modal -->
+<div class="scanner-modal" id="scanModal">
+  <div class="scanner-inner">
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scanner-frame">
+      <div class="scan-line"></div>
+    </div>
+    <div class="scan-result-flash" id="scanFlash"></div>
+  </div>
+  <div class="scanner-label">
+    Apunta la cámara al código de barras
+    <small>El escaneo es automático</small>
+  </div>
+  <button class="close-scan" onclick="closeScanner()">Cancelar</button>
+</div>
+
+<!-- CONFIG -->
+<div class="screen active" id="scfg">
+  <div class="app-header">
+    <h1>Nicolás Market</h1>
+    <h2>Inventario Físico</h2>
+    <p>Ingresa tus datos para comenzar</p>
+  </div>
+  <div class="screen-body">
+    <div class="field">
+      <label>Tu nombre completo</label>
+      <input type="text" id="cfg-name" placeholder="Escribe tu nombre...">
+    </div>
+    <div class="field">
+      <label>Área de trabajo</label>
+      <select id="cfg-area">
+        <option value="">— selecciona —</option>
+        <option>Anaquel principal</option>
+        <option>Bodega</option>
+        <option>Refrigerador / Congelador</option>
+        <option>Mostrador</option>
+        <option>Entrada / Vestíbulo</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div id="cfg-err" class="err-box" style="display:none"></div>
+    <button class="btn btn-primary" onclick="startApp()">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Iniciar conteo
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="screen" id="scmain">
+  <div class="app-header" style="padding-bottom:16px">
+    <h1>Nicolás Market</h1>
+    <h2>Inventario Físico</h2>
+    <p id="hdr-sub">—</p>
+  </div>
+  <div class="screen-body">
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="s-cnt">0</div><div class="stat-l">Contados</div></div>
+      <div class="stat"><div class="stat-v" id="s-dif">0</div><div class="stat-l">Diferencias</div></div>
+    </div>
+    <div class="stitle">Escanear producto</div>
+    <div class="field">
+      <div class="bc-row">
+        <input type="text" id="inp-bc" placeholder="Código de barras..." inputmode="numeric" autocomplete="off" autocorrect="off">
+        <button class="cam-btn" onclick="openScanner()" title="Escanear con cámara">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="pdisplay" class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M18 14h3M14 18v3M18 18h3v3"/></svg>
+      <p>Escanea o escribe el código de barras</p>
+    </div>
+    <div id="cntarea" style="display:none">
+      <div class="card">
+        <div class="stitle" style="margin-bottom:6px">Cantidad encontrada</div>
+        <div class="counter-row">
+          <button class="adj-btn" onclick="adj(-1)">−</button>
+          <input type="number" id="inp-cnt" value="0" min="0" step="1">
+          <button class="adj-btn" onclick="adj(1)">+</button>
+        </div>
+        <div class="diff-row">
+          <span class="diff-lbl">Diferencia vs. sistema</span>
+          <span class="diff-v dz" id="diff-out">0</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Observaciones (opcional)</label>
+        <textarea id="inp-obs" placeholder="Dañado, próximo a caducar, mal ubicado..."></textarea>
+      </div>
+      <div id="save-err" class="err-box" style="display:none"></div>
+      <button class="btn btn-primary" id="btn-save" onclick="saveCount()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar en Google Sheets
+      </button>
+    </div>
+    <div id="okarea" style="display:none">
+      <div class="ok-box">
+        <strong>✓ Guardado en Google Sheets</strong>
+        <span id="ok-detail"></span>
+      </div>
+      <div class="sync-line"><span class="dot dot-ok"></span>Sincronizado · <span id="ok-time"></span></div>
+      <button class="btn btn-outline" onclick="next()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Siguiente producto
+      </button>
+    </div>
+  </div>
+  <div class="footer-nav">
+    <button class="fnav-btn" onclick="show('scmain')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Inicio
+    </button>
+    <button class="fnav-btn" onclick="showLog()">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Historial
+    </button>
+    <button class="fnav-btn" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar
+    </button>
+    <button class="fnav-btn" onclick="resetApp()">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Salir
+    </button>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="screen" id="sclog">
+  <div class="app-header">
+    <h1>Nicolás Market</h1>
+    <h2>Historial</h2>
+    <p id="log-sub">sesión actual</p>
+  </div>
+  <div class="screen-body">
+    <button class="btn btn-outline" onclick="show('scmain')" style="margin-bottom:16px">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Volver
+    </button>
+    <div id="log-body"></div>
+  </div>
+</div>
+
+<script>
+var WEB_APP_URL='https://script.google.com/macros/s/AKfycbwiCB1uZNNINfHe9jvvuAfmCywtIy16ADwjeG7Hd29L-z86TFJWR3I12f047-0hpuH_/exec';
+
+var CAT={
+  '7501055313068':{n:'Coca Cola Retornable 3L',p:'3L',c:'Bebidas',v:'Coca Cola',s:'11'},
+  '7501055332175':{n:'Coca Cola No Retornable 355ml',p:'355ml',c:'Bebidas',v:'Zorro',s:'4'},
+  '7501055313532':{n:'Coca Cola 1.75 lt',p:'1.75lt',c:'Bebidas',v:'Coca Cola',s:'8'},
+  '7501055371655':{n:'Coca Cola 1350ml',p:'1350ml',c:'Bebidas',v:'Coca Cola',s:'4'},
+  '7503006897016':{n:'Red Cola 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'2'},
+  '793573950079':{n:'Red Cola 3 lts',p:'3lt',c:'Bebidas',v:'Red Cola',s:'8'},
+  '7501055307906':{n:'Agua Ciel 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'5'},
+  '7501055313006':{n:'Agua Ciel 10 lt',p:'10lt',c:'Bebidas',v:'Coca Cola',s:'9'},
+  '7501086801121':{n:'Agua Epura 600ml',p:'600ml',c:'Bebidas',v:'Pepsi',s:'14'},
+  '7501086800636':{n:'Agua Epura 2lt',p:'2lt',c:'Bebidas',v:'Pepsi',s:'13'},
+  '758104000159':{n:'Agua Bonafont 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'2'},
+  '7501125104268':{n:'Electrolit Fresa 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'3'},
+  '7501125104411':{n:'Electrolit Coco 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'0'},
+  '7501125174797':{n:'Electrolit Mora Azul 625ml',p:'625ml',c:'Bebidas',v:'Zorro',s:'6'},
+  '7501022009321':{n:'Pepsi 1.75lt',p:'1.75lt',c:'Bebidas',v:'Pepsi',s:'8'},
+  '7501031310012':{n:'Pepsi 600ml',p:'600ml',c:'Bebidas',v:'Pepsi',s:'30'},
+  '7501055339983':{n:'Sidral Mundet 600ml',p:'600ml',c:'Bebidas',v:'Coca Cola',s:'16'},
+  '7501073839885':{n:'Peñafiel Limonada 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'12'},
+  '7501073839854':{n:'Peñafiel Naranjada 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'12'},
+  '744886288823':{n:'Jarritos Limon 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'10'},
+  '744886308828':{n:'Jarritos Piña 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'8'},
+  '744886318827':{n:'Jarritos Tutti Frutti 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'7'},
+  '7500810029183':{n:'Bimbo Pan Blanco 620g',p:'620g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'1'},
+  '7501000111602':{n:'Bimbo Pan Hamburguesa 8pz',p:'450g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'2'},
+  '7501000111503':{n:'Pan Medias Noches Hot Dog',p:'340g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'4'},
+  '7500810032978':{n:'Bimbo Integral Chico 300g',p:'300g',c:'Pan y Botanas',v:'Bimbo Blanco',s:'5'},
+  '75044916':{n:'Marlboro Kretek Mint 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'3 paq 2 pz'},
+  '75001339':{n:'Marlboro Rojo 14pza',p:'14pza',c:'Cigarros',v:'Zorro',s:'2 paq'},
+  '75068738':{n:'Marlboro Gold 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'3 paq 1 pz'},
+  '75021597':{n:'Marlboro Rojo 100s 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'1 paq 15 pz'},
+  '75019006':{n:'Marlboro Caribbean Fusion 20pz',p:'20pz',c:'Cigarros',v:'Zorro',s:'11 pz'},
+  '75064648':{n:'Pall Mall Mykonos Nightfall 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'1 paq 18 pz'},
+  '75071295':{n:'Pall Mall Alaska Menta 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'1 paq 9 pz'},
+  '75080518':{n:'Pall Mall Osaka 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 3 pz'},
+  '75080525':{n:'Pall Mall Honolulu Sandia 20pz',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 11 pz'},
+  '75064716':{n:'Lucky Strike 20 cigarros',p:'20pz',c:'Cigarros',v:'British American Tobacco',s:'2 paq 11 pz'},
+  '7501040091407':{n:'Yoghurt Beber Fresa 220g',p:'220g',c:'Lácteos',v:'Sigma',s:'7'},
+  '7501040075711':{n:'Yoplait Yogurt Fresa 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'5'},
+  '7501040098116':{n:'Yoplait Griego Fresa 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'7'},
+  '7501040098123':{n:'Yoplait Griego Moras 120g',p:'120g',c:'Lácteos',v:'Sigma',s:'10'},
+  '7501295600126':{n:'Leche Santa Clara Entera 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'1'},
+  '7501020526066':{n:'Lala Leche Entera 1lt',p:'1lt',c:'Lácteos',v:'Lala',s:'0'},
+  '7501020527278':{n:'Lala Leche Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'8'},
+  '7501040086885':{n:'Yoplait Crema Entera Acida 400ml',p:'400ml',c:'Lácteos',v:'Sigma',s:'2'},
+  '7501040086878':{n:'Yoplait Crema Acidificada 180g',p:'180g',c:'Lácteos',v:'Sigma',s:'3'},
+  '7501055909520':{n:'Crema Alpura 200ml',p:'200ml',c:'Lácteos',v:'Zorro',s:'0'},
+  '7501055919390':{n:'Alpura Crema Acida 190ml',p:'190ml',c:'Lácteos',v:'Zorro',s:'5'},
+  '7622202308871':{n:'Trident 14s Menta Caja',p:'33.6g',c:'Dulces y Chicles',v:'Mondelez',s:'1'},
+  '75073244':{n:'Bubbaloo Fresa',p:'pza',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'57'},
+  '75045616':{n:'Trident Hierbabuena 4pz',p:'4pz',c:'Dulces y Chicles',v:'Dulceria CANDY',s:'49'},
+  '75045623':{n:'Trident Menta 1pz',p:'1pz',c:'Dulces y Chicles',v:'Mondelez',s:'37'},
+  '7500810003671':{n:'Barcel Takis Fuego 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'5'},
+  '7500810000465':{n:'Takis Fuego 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'8'},
+  '7500810028353':{n:'Takis Blue Heat 70g',p:'70g',c:'Pan y Botanas',v:'Barcel',s:'5'},
+  '7501030448242':{n:'Takis Fuego 35g',p:'35g',c:'Pan y Botanas',v:'Zorro',s:'24'},
+  '7501011123588':{n:'Doritos Nachos 61g',p:'61g',c:'Pan y Botanas',v:'Sabritas',s:'8'},
+  '7500478024940':{n:'Doritos Nacho 54g',p:'54g',c:'Pan y Botanas',v:'Zorro',s:'15'},
+  '7500478046706':{n:'Ruffles Mega Crunch Salsa Roja 50g',p:'50g',c:'Pan y Botanas',v:'Sabritas',s:'4'},
+  '7500478044221':{n:'Ruffles Queso 48g',p:'48g',c:'Pan y Botanas',v:'Sabritas',s:'5'},
+  '7501040002649':{n:'Jamon Americano Fud kg',p:'kg',c:'Refrigerados/Fríos',v:'Sigma',s:'2.811 kg'},
+  '7501040023644':{n:'Fud Jamon de Pavo 196g',p:'196g',c:'Refrigerados/Fríos',v:'Sigma',s:'2'},
+  '7501040083808':{n:'Queso Americano Fud 180g',p:'180g',c:'Refrigerados/Fríos',v:'Sigma',s:'2'},
+  '7622210574091':{n:'Philadelphia Queso Crema 120g',p:'120g',c:'Refrigerados/Fríos',v:'Sigma',s:'0'},
+  '7501040081477':{n:'La Villita Queso Amarillo 175g',p:'175g',c:'Refrigerados/Fríos',v:'Sigma',s:'5 paq 6 pz'},
+  '7501040023989':{n:'San Rafael Jamon Real 250g',p:'250g',c:'Refrigerados/Fríos',v:'Sigma',s:'3'},
+  '7501052420431':{n:'La Sierra Frijoles Bayos 580g',p:'580g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '7501017042920':{n:'Frijoles Bayos La Costeña 430g',p:'430g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
+  '7506306307209':{n:'Knorr Arroz a la Mexicana 155g',p:'155g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '7501018310035':{n:'Fideo La Moderna No.2 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
+  '7501018310547':{n:'Pasta Codo La Moderna No.4 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'3'},
+  '7501039127469':{n:'Nutrioli Pasta Spaguetti 200g',p:'200g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '41789001956':{n:'Maruchan Camaron 64g',p:'64g',c:'Sopas Instantáneas',v:'Zorro',s:'1'},
+  '41789001925':{n:'Maruchan Res 64g',p:'64g',c:'Sopas Instantáneas',v:'Huevo GARCES',s:'5'},
+  '7503020651823':{n:'Cup Noodles Birria 64g',p:'64g',c:'Abarrotes Básicos',v:'Zorro',s:'0'},
+  '7506192503358':{n:'Gel Ego Diez 200ml',p:'200ml',c:'Higiene Personal',v:'Zorro',s:'0'},
+  '7506192502603':{n:'Shampoo Savile Savila Miel 180ml',p:'180ml',c:'Higiene Personal',v:'Zorro',s:'3'},
+  '7506192503426':{n:'Shampoo Savile Keratina 180ml',p:'180ml',c:'Higiene Personal',v:'Zorro',s:'3'},
+  '7501035910096':{n:'Fabuloso Fresco Amanecer 1lt',p:'1lt',c:'Limpieza',v:'Zorro',s:'1'},
+  '7501071900112':{n:'Clorox Concentrado 500ml',p:'500ml',c:'Limpieza',v:'Zorro',s:'1'},
+  '7501071900129':{n:'Clorox 930ml',p:'930ml',c:'Limpieza',v:'Zorro',s:'2'},
+  '7501026004612':{n:'Jabon Roma 500g',p:'500g',c:'Limpieza',v:'Zorro',s:'1'},
+  '7501026004605':{n:'Roma Detergente 1000g',p:'1000g',c:'Limpieza',v:'Zorro',s:'3'},
+  '7503003924517':{n:'Veladora Fino Limonero Vaso',p:'1pza',c:'Limpieza',v:'Zorro',s:'0'},
+  '7501557207209':{n:'Veladora Aramo 30Hrs',p:'1pza',c:'Limpieza',v:'Zorro',s:'3'},
+  '8719200450523':{n:'Iberia Margarina sin Sal 225g',p:'225g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '7501056342227':{n:'Crema Peinar Sedal Rizos 135ml',p:'135ml',c:'Higiene Personal',v:'Zorro',s:'0'},
+  '7501295600157':{n:'Leche Santa Clara Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
+  '7501480700075':{n:'Tehuacan Agua Mineral 600ml',p:'600ml',c:'Bebidas',v:'Zorro',s:'0'},
+  '7501059235441':{n:'Agua Santa Maria 1lt',p:'1lt',c:'Bebidas',v:'Zorro',s:'1'},
+  '7501062700042':{n:'La Morena Jalapeños 210g',p:'210g',c:'Abarrotes Básicos',v:'Zorro',s:'1'},
+  '7501003105486':{n:'Atun Herdez en Agua 130g',p:'130g',c:'Bebidas',v:'Zorro',s:'2'},
+  '7506192505802':{n:'Riko Pollo 3 Cubos 33g',p:'33g',c:'Sopas Instantáneas',v:'Zorro',s:'43'},
+  '7501005180306':{n:'Knorr Caldo Pollo 2 Cubos',p:'2pz',c:'Sopas Instantáneas',v:'Zorro',s:'72 paq 1 pz'},
+  '7501026005381':{n:'Jabon Zote 200g',p:'200g',c:'Limpieza',v:'Zorro',s:'3'},
+  '7501026004629':{n:'Roma Detergente 250g',p:'250g',c:'Limpieza',v:'Zorro',s:'4'},
+  '7501020565911':{n:'Lala Leche Deslactosada Slim 1lt',p:'1lt',c:'Lácteos',v:'Lala',s:'-1'},
+  '7501020565935':{n:'Lala Entera Leche UHT 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'4'},
+  '7501055900039':{n:'Alpura Clasica 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'5'},
+  '7501055901425':{n:'Alpura Deslactosada 1lt',p:'1lt',c:'Lácteos',v:'Zorro',s:'6'},
+};
+
+var S={name:'',area:'',counts:[],withDiff:0};
+var cur=null;
+var codeReader=null;
+var scanActive=false;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function startApp(){
+  var nm=document.getElementById('cfg-name').value.trim();
+  var ar=document.getElementById('cfg-area').value;
+  var err=document.getElementById('cfg-err');
+  if(!nm){err.textContent='Por favor escribe tu nombre.';err.style.display='block';return}
+  if(!ar){err.textContent='Por favor selecciona tu área.';err.style.display='block';return}
+  err.style.display='none';
+  S.name=nm;S.area=ar;
+  document.getElementById('hdr-sub').textContent=nm+' · '+ar;
+  show('scmain');
+  setTimeout(function(){document.getElementById('inp-bc').focus()},200);
+}
+
+// ── Barcode input ──
+var bcTimer;
+document.getElementById('inp-bc').addEventListener('input',function(){
+  clearTimeout(bcTimer);
+  var v=this.value.trim();
+  bcTimer=setTimeout(function(){if(v)lookup(v)},380);
+});
+document.getElementById('inp-bc').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){clearTimeout(bcTimer);lookup(this.value.trim())}
+});
+document.getElementById('inp-cnt').addEventListener('input',updDiff);
+
+// ── Camera scanner ──
+function openScanner(){
+  if(typeof ZXing==='undefined'){
+    alert('El escáner de cámara está cargando, intenta en unos segundos.');return;
+  }
+  document.getElementById('scanModal').classList.add('open');
+  if(!codeReader) codeReader=new ZXing.BrowserMultiFormatReader();
+  scanActive=true;
+  codeReader.listVideoInputDevices().then(function(devices){
+    var deviceId=null;
+    // Prefer back camera
+    for(var i=0;i<devices.length;i++){
+      var lbl=(devices[i].label||'').toLowerCase();
+      if(lbl.includes('back')||lbl.includes('rear')||lbl.includes('trasera')||lbl.includes('environment')){
+        deviceId=devices[i].deviceId;break;
+      }
+    }
+    if(!deviceId && devices.length>0) deviceId=devices[devices.length-1].deviceId;
+    var constraints=deviceId
+      ?{deviceId:{exact:deviceId}}
+      :{facingMode:{ideal:'environment'}};
+    return codeReader.decodeFromConstraints({video:constraints},'scanVideo',function(result,err){
+      if(!scanActive) return;
+      if(result){
+        // Flash effect
+        var fl=document.getElementById('scanFlash');
+        fl.style.opacity='1';
+        setTimeout(function(){fl.style.opacity='0'},200);
+        var code=result.getText();
+        closeScanner();
+        document.getElementById('inp-bc').value=code;
+        lookup(code);
+      }
+    });
+  }).catch(function(e){
+    closeScanner();
+    alert('No se pudo acceder a la cámara. Asegúrate de dar permiso cuando el navegador lo pida.');
+    console.error(e);
+  });
+}
+
+function closeScanner(){
+  scanActive=false;
+  document.getElementById('scanModal').classList.remove('open');
+  if(codeReader){
+    try{codeReader.reset()}catch(e){}
+  }
+}
+
+function lookup(code){
+  var p=CAT[code];
+  if(p){
+    cur={barcode:code,name:p.n,pres:p.p,cat:p.c,prov:p.v,stock:p.s};
+    renderProduct();
+  } else {
+    cur={barcode:code,name:'(capturar nombre)',pres:'',cat:'Otros',prov:'Sin registro',stock:'0'};
+    renderNF(code);
+  }
+}
+
+function renderProduct(){
+  var sn=parseFloat((cur.stock||'0').replace(/[^0-9.]/g,''))||0;
+  var bc=sn===0?'badge bzero':sn<=2?'badge blow':'badge bok';
+  var bt=sn===0?'sin stock':sn<=2?'stock bajo':'en stock';
+  document.getElementById('pdisplay').innerHTML=
+    '<div class="card green">'+
+      '<div style="font-size:16px;font-weight:600;color:#1A1A18;line-height:1.35;margin-bottom:4px">'+cur.name+'</div>'+
+      '<span class="'+bc+'">'+cur.stock+' · '+bt+'</span>'+
+      '<div class="pinfo">'+
+        '<div class="pi"><div class="pi-l">Categoría</div><div class="pi-v">'+cur.cat+'</div></div>'+
+        '<div class="pi"><div class="pi-l">Proveedor</div><div class="pi-v">'+cur.prov+'</div></div>'+
+        '<div class="pi"><div class="pi-l">Presentación</div><div class="pi-v">'+(cur.pres||'—')+'</div></div>'+
+        '<div class="pi"><div class="pi-l">Código</div><div class="pi-v" style="font-family:var(--mono);font-size:11px">'+cur.barcode+'</div></div>'+
+      '</div>'+
+    '</div>';
+  resetCnt();
+}
+
+function renderNF(code){
+  document.getElementById('pdisplay').innerHTML=
+    '<div class="card red">'+
+      '<div style="font-size:14px;font-weight:500;color:#A32D2D;margin-bottom:4px">Producto no encontrado en catálogo</div>'+
+      '<div style="font-family:var(--mono);font-size:13px;color:#888780;margin-bottom:8px">'+code+'</div>'+
+      '<div style="font-size:13px;color:#5F5E5A">Puedes registrar el conteo igual. El sistema lo marcará para revisión.</div>'+
+    '</div>';
+  resetCnt();
+}
+
+function resetCnt(){
+  document.getElementById('inp-cnt').value=0;
+  document.getElementById('inp-obs').value='';
+  document.getElementById('diff-out').textContent='0';
+  document.getElementById('diff-out').className='diff-v dz';
+  document.getElementById('save-err').style.display='none';
+  var btn=document.getElementById('btn-save');
+  btn.disabled=false;
+  btn.innerHTML='<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar en Google Sheets';
+  document.getElementById('cntarea').style.display='block';
+  document.getElementById('okarea').style.display='none';
+  document.getElementById('inp-cnt').focus();
+}
+
+function adj(d){
+  var el=document.getElementById('inp-cnt');
+  el.value=Math.max(0,(parseInt(el.value)||0)+d);
+  updDiff();
+}
+
+function updDiff(){
+  if(!cur) return;
+  var cnt=parseInt(document.getElementById('inp-cnt').value)||0;
+  var stk=parseFloat((cur.stock||'0').replace(/[^0-9.]/g,''))||0;
+  var df=cnt-stk;
+  var el=document.getElementById('diff-out');
+  el.textContent=(df>0?'+':'')+df;
+  el.className='diff-v '+(df<0?'dn':df>0?'dp':'dz');
+}
+
+function saveCount(){
+  if(!cur) return;
+  var btn=document.getElementById('btn-save');
+  btn.disabled=true;btn.innerHTML='Guardando...';
+  var cnt=parseInt(document.getElementById('inp-cnt').value)||0;
+  var stk=parseFloat((cur.stock||'0').replace(/[^0-9.]/g,''))||0;
+  var df=cnt-stk;
+  var obs=document.getElementById('inp-obs').value.trim();
+  var now=new Date();
+  var payload={
+    ts:now.toLocaleString('es-MX'),resp:S.name,area:S.area,
+    barcode:cur.barcode,name:cur.name,cat:cur.cat,prov:cur.prov,
+    stock:cur.stock,counted:cnt,diff:df,obs:obs
+  };
+  fetch(WEB_APP_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  .then(function(){
+    S.counts.push(payload);if(df!==0)S.withDiff++;
+    document.getElementById('s-cnt').textContent=S.counts.length;
+    document.getElementById('s-dif').textContent=S.withDiff;
+    var det=cnt+' pzas';
+    if(df<0)det+=' · falta '+Math.abs(df);
+    else if(df>0)det+=' · sobra '+df;
+    else det+=' · coincide';
+    document.getElementById('ok-detail').textContent=det;
+    document.getElementById('ok-time').textContent=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('cntarea').style.display='none';
+    document.getElementById('okarea').style.display='block';
+  })
+  .catch(function(){
+    S.counts.push(payload);if(df!==0)S.withDiff++;
+    document.getElementById('s-cnt').textContent=S.counts.length;
+    document.getElementById('s-dif').textContent=S.withDiff;
+    var eb=document.getElementById('save-err');
+    eb.innerHTML='Sin conexión — guardado localmente. Exporta el CSV al terminar.';
+    eb.style.display='block';
+    btn.disabled=false;
+    btn.innerHTML='Guardar en Google Sheets';
+  });
+}
+
+function next(){
+  cur=null;
+  document.getElementById('inp-bc').value='';
+  document.getElementById('pdisplay').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M18 14h3M14 18v3M18 18h3v3"/></svg><p>Escanea o escribe el código de barras</p></div>';
+  document.getElementById('cntarea').style.display='none';
+  document.getElementById('okarea').style.display='none';
+  document.getElementById('inp-bc').focus();
+}
+
+function showLog(){
+  var html='';
+  if(!S.counts.length){
+    html='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="40" height="40"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg><p>Sin conteos en esta sesión</p></div>';
+  } else {
+    document.getElementById('log-sub').textContent=S.counts.length+' conteos · '+S.name;
+    S.counts.slice().reverse().forEach(function(r){
+      var dc=r.diff<0?'dn':r.diff>0?'dp':'dz';
+      html+='<div class="log-item"><div class="log-name">'+r.name+'</div>'+
+        '<div class="log-meta"><span class="log-info">'+r.cat+' · '+r.ts+'</span>'+
+        '<span class="diff-v '+dc+'" style="font-size:14px">'+(r.diff>=0?'+':'')+r.diff+'</span></div>'+
+        (r.obs?'<div class="log-obs">'+r.obs+'</div>':'')+
+      '</div>';
+    });
+  }
+  document.getElementById('log-body').innerHTML=html;
+  show('sclog');
+}
+
+function exportCSV(){
+  if(!S.counts.length){alert('Sin conteos para exportar.');return}
+  var rows=['Timestamp,Responsable,Area,Codigo,Producto,Categoria,Proveedor,Stock Sistema,Conteo,Diferencia,Observaciones'];
+  S.counts.forEach(function(r){
+    rows.push([r.ts,r.resp,r.area,r.barcode,'"'+r.name+'"',r.cat,r.prov,r.stock,r.counted,r.diff,'"'+(r.obs||'')+'"'].join(','));
+  });
+  var b=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='inventario_nicolasmarket_'+new Date().toLocaleDateString('es-MX').replace(/\//g,'-')+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function resetApp(){
+  if(S.counts.length>0&&!confirm('¿Salir? Los conteos no exportados se perderán.'))return;
+  S={name:'',area:'',counts:[],withDiff:0};cur=null;
+  document.getElementById('cfg-name').value='';
+  document.getElementById('cfg-area').value='';
+  document.getElementById('s-cnt').textContent='0';
+  document.getElementById('s-dif').textContent='0';
+  show('scfg');
+}
+</script>
+</body>
+</html>
